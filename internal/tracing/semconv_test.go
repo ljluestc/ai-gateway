@@ -167,6 +167,7 @@ func requireAllRecordersSet(t *testing.T, r *recorderSet) {
 	require.NotNil(t, r.message, "message")
 	require.NotNil(t, r.tokenize, "tokenize")
 	require.NotNil(t, r.responsesInputTokens, "responsesInputTokens")
+	require.NotNil(t, r.responsesCompact, "responsesCompact")
 	require.NotNil(t, r.countTokens, "countTokens")
 
 	// The MCP vocabulary is a struct of function fields rather than a recorder

@@ -70,5 +70,6 @@ type (
 	messageSpan              = span[anthropicschema.MessagesResponse, anthropicschema.MessagesStreamChunk]
 	tokenizeSpan             = span[tokenize.Response, struct{}]
 	responsesInputTokensSpan = span[openai.ResponsesInputTokensResponse, struct{}]
+	responsesCompactSpan     = span[openai.ResponsesCompactResponse, struct{}]
 	countTokensSpan          = span[anthropicschema.CountTokensResponse, struct{}]
 )

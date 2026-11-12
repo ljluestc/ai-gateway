@@ -1730,6 +1730,78 @@ func TestParseMultipartBody_RejectsJSONOnlyEndpoints(t *testing.T) {
 
 	_, _, _, _, err = ResponsesInputTokensEndpointSpec{}.ParseMultipartBody(nil, "", false)
 	require.ErrorContains(t, err, "multipart body not supported")
+
+	_, _, _, _, err = ResponsesCompactEndpointSpec{}.ParseMultipartBody(nil, "", false)
+	require.ErrorContains(t, err, "multipart body not supported")
+}
+
+func TestResponsesCompactEndpointSpec_ParseBody(t *testing.T) {
+	spec := ResponsesCompactEndpointSpec{}
+
+	t.Run("invalid json", func(t *testing.T) {
+		_, _, _, _, err := spec.ParseBody([]byte("{"), false)
+		require.ErrorContains(t, err, "malformed request")
+		require.ErrorContains(t, err, "/v1/responses/compact")
+	})
+
+	t.Run("open responses compact body", func(t *testing.T) {
+		body := []byte(`{
+			"model": "gpt-5",
+			"instructions": "be brief",
+			"previous_response_id": "resp_123",
+			"prompt_cache_key": "k",
+			"input": [
+				{"type": "message", "role": "assistant", "phase": "commentary", "content": "thinking"},
+				{"type": "message", "role": "assistant", "phase": "final_answer", "content": "four"},
+				{"type": "compaction", "encrypted_content": "abc"},
+				{"type": "message", "role": "user", "content": "repeat"}
+			]
+		}`)
+		model, parsed, stream, mutated, err := spec.ParseBody(body, false)
+		require.NoError(t, err)
+		require.Equal(t, "gpt-5", model)
+		require.False(t, stream)
+		require.Nil(t, mutated)
+		require.Equal(t, "resp_123", parsed.PreviousResponseID)
+		require.Len(t, parsed.Input.OfInputItemList, 4)
+		require.Equal(t, "commentary", parsed.Input.OfInputItemList[0].OfOutputMessage.Phase)
+		require.Equal(t, "final_answer", parsed.Input.OfInputItemList[1].OfOutputMessage.Phase)
+	})
+
+	t.Run("stream is never reported", func(t *testing.T) {
+		_, _, stream, _, err := spec.ParseBody([]byte(`{"model":"gpt-5","input":"hi","stream":true}`), false)
+		require.NoError(t, err)
+		require.False(t, stream)
+	})
+}
+
+func TestResponsesCompactEndpointSpec_GetTranslator(t *testing.T) {
+	spec := ResponsesCompactEndpointSpec{}
+
+	_, err := spec.GetTranslator(filterapi.VersionedAPISchema{Name: filterapi.APISchemaOpenAI}, "override")
+	require.NoError(t, err)
+
+	_, err = spec.GetTranslator(filterapi.VersionedAPISchema{Name: filterapi.APISchemaAzureOpenAI, Version: "2025-04-01-preview"}, "")
+	require.NoError(t, err)
+
+	_, err = spec.GetTranslator(filterapi.VersionedAPISchema{Name: filterapi.APISchemaAWSBedrock}, "")
+	require.ErrorContains(t, err, "unsupported API schema for /v1/responses/compact")
+	require.ErrorIs(t, err, internalapi.ErrInvalidRequestBody)
+}
+
+func TestResponsesCompactEndpointSpec_RedactSensitiveInfoFromRequest(t *testing.T) {
+	const markerInstr = "marker-instructions"
+	const markerInput = "marker-compact-input"
+	body := `{"model":"gpt-5","instructions":"` + markerInstr + `","input":[{"type":"message","role":"user","content":"` + markerInput + `"}]}`
+	_, req, _, _, err := ResponsesCompactEndpointSpec{}.ParseBody([]byte(body), false)
+	require.NoError(t, err)
+	redacted, err := ResponsesCompactEndpointSpec{}.RedactSensitiveInfoFromRequest(req)
+	require.NoError(t, err)
+	out := mustMarshal(t, redacted)
+	require.NotContains(t, out, markerInstr)
+	require.NotContains(t, out, markerInput)
+	require.Contains(t, out, "[REDACTED")
+	require.Contains(t, mustMarshal(t, req), markerInstr, "original must not be mutated")
 }
 
 func TestResponsesInputTokensEndpointSpec_ParseBody(t *testing.T) {

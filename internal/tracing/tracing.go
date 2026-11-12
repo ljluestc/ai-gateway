@@ -38,6 +38,7 @@ type tracingImpl struct {
 	messageTracer              tracingapi.MessageTracer
 	tokenizeTracer             tracingapi.TokenizeTracer
 	responsesInputTokensTracer tracingapi.ResponsesInputTokensTracer
+	responsesCompactTracer     tracingapi.ResponsesCompactTracer
 	countTokensTracer          tracingapi.CountTokensTracer
 	mcpTracer                  tracingapi.MCPTracer
 	// shutdown is nil when we didn't create tp.
@@ -117,6 +118,11 @@ func (t *tracingImpl) TokenizeTracer() tracingapi.TokenizeTracer {
 // ResponsesInputTokensTracer implements the same method as documented on tracingapi.Tracing.
 func (t *tracingImpl) ResponsesInputTokensTracer() tracingapi.ResponsesInputTokensTracer {
 	return t.responsesInputTokensTracer
+}
+
+// ResponsesCompactTracer implements the same method as documented on tracingapi.Tracing.
+func (t *tracingImpl) ResponsesCompactTracer() tracingapi.ResponsesCompactTracer {
+	return t.responsesCompactTracer
 }
 
 // CountTokensTracer implements the same method as documented on tracingapi.Tracing.
@@ -326,6 +332,12 @@ func NewTracingFromEnv(ctx context.Context, stdout io.Writer, headerAttributeMap
 			tracer,
 			propagator,
 			recorders.responsesInputTokens,
+			headerAttrs,
+		),
+		responsesCompactTracer: newResponsesCompactTracer(
+			tracer,
+			propagator,
+			recorders.responsesCompact,
 			headerAttrs,
 		),
 		countTokensTracer: newCountTokensTracer(

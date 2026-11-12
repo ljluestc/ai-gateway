@@ -178,6 +178,8 @@ type (
 	TokenizeTranslator = Translator[tokenize.RequestUnion, tracingapi.TokenizeSpan]
 	// OpenAIResponsesInputTokensTranslator translates the OpenAI's /v1/responses/input_tokens endpoint.
 	OpenAIResponsesInputTokensTranslator = Translator[openai.ResponseRequest, tracingapi.ResponsesInputTokensSpan]
+	// OpenAIResponsesCompactTranslator translates the OpenAI's /v1/responses/compact endpoint.
+	OpenAIResponsesCompactTranslator = Translator[openai.ResponseRequest, tracingapi.ResponsesCompactSpan]
 	// AnthropicCountTokensTranslator translates the Anthropic's /v1/messages/count_tokens endpoint.
 	AnthropicCountTokensTranslator = Translator[anthropicschema.CountTokensRequest, tracingapi.CountTokensSpan]
 )

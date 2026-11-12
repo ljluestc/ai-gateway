@@ -45,6 +45,7 @@ type recorderSet struct {
 	tokenize        tracingapi.TokenizeRecorder
 
 	responsesInputTokens tracingapi.ResponsesInputTokensRecorder
+	responsesCompact     tracingapi.ResponsesCompactRecorder
 	countTokens          tracingapi.CountTokensRecorder
 
 	// mcp is the vocabulary used for MCP spans. MCP is not an LLM endpoint and
@@ -121,6 +122,7 @@ func newOpenInferenceRecorders() recorderSet {
 		tokenize:        openai.NewTokenizeRecorder(cfg),
 
 		responsesInputTokens: openai.NewResponsesInputTokensRecorder(cfg),
+		responsesCompact:     openai.NewResponsesCompactRecorder(cfg),
 		countTokens:          anthropic.NewCountTokensRecorder(cfg),
 
 		// OpenInference defines no MCP conventions, so MCP spans keep the
@@ -151,6 +153,7 @@ func newOTelGenAIRecorders() recorderSet {
 		tokenize:        otelgenai.NewTokenizeRecorder(cfg),
 
 		responsesInputTokens: otelgenai.NewResponsesInputTokensRecorder(cfg),
+		responsesCompact:     otelgenai.NewResponsesCompactRecorder(cfg),
 		countTokens:          otelgenai.NewCountTokensRecorder(cfg),
 
 		mcp: mcpVocabularyOTel(cfg.CaptureMessageContent),

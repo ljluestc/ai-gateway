@@ -399,6 +399,22 @@ func NewResponsesInputTokensRecorder(config *Config) tracingapi.ResponsesInputTo
 	}
 }
 
+// NewResponsesCompactRecorder creates a tracingapi.ResponsesCompactRecorder.
+//
+// Compaction invokes the model to summarize a Responses conversation into a
+// shorter item list, so it reports the chat operation like /v1/responses does,
+// with the same request attributes and system instructions.
+func NewResponsesCompactRecorder(config *Config) tracingapi.ResponsesCompactRecorder {
+	return &recorder[openai.ResponseRequest, openai.ResponsesCompactResponse, struct{}]{
+		operation:          OperationChat,
+		config:             configOrEnv(config),
+		requestModel:       func(r *openai.ResponseRequest) string { return r.Model },
+		requestAttrs:       responsesRequestAttrs,
+		responseAttrs:      responsesCompactResponseAttrs,
+		systemInstructions: responsesSystemInstructions,
+	}
+}
+
 // NewCountTokensRecorder creates a tracingapi.CountTokensRecorder.
 //
 // Anthropic's count_tokens endpoint reports how many input tokens a

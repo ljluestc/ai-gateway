@@ -885,6 +885,7 @@ func TestNewTracingFromEnv_everyTracerWired(t *testing.T) {
 			require.NotNil(t, tracing.MessageTracer(), "MessageTracer")
 			require.NotNil(t, tracing.TokenizeTracer(), "TokenizeTracer")
 			require.NotNil(t, tracing.ResponsesInputTokensTracer(), "ResponsesInputTokensTracer")
+			require.NotNil(t, tracing.ResponsesCompactTracer(), "ResponsesCompactTracer")
 			require.NotNil(t, tracing.CountTokensTracer(), "CountTokensTracer")
 			require.NotNil(t, tracing.MCPTracer(), "MCPTracer")
 		})

@@ -155,15 +155,24 @@ func (o *openAIToOpenAITranslatorV1Responses) handleNonStreamingResponse(body io
 // setTokenUsageFromResponse populates tokenUsage from a Response's Usage field,
 // guarding against a nil Usage (e.g. response.failed before any tokens were generated).
 func setTokenUsageFromResponse(tokenUsage *metrics.TokenUsage, resp *openai.Response) {
-	if resp == nil || resp.Usage == nil {
+	if resp == nil {
 		return
 	}
-	tokenUsage.SetInputTokens(uint32(resp.Usage.InputTokens))                                             // #nosec G115
-	tokenUsage.SetOutputTokens(uint32(resp.Usage.OutputTokens))                                           // #nosec G115
-	tokenUsage.SetTotalTokens(uint32(resp.Usage.TotalTokens))                                             // #nosec G115
-	tokenUsage.SetCachedInputTokens(uint32(resp.Usage.InputTokensDetails.CachedTokens))                   // #nosec G115
-	tokenUsage.SetCacheCreationInputTokens(uint32(resp.Usage.InputTokensDetails.CacheWriteTokensValue())) // #nosec G115
-	tokenUsage.SetReasoningTokens(uint32(resp.Usage.OutputTokensDetails.ReasoningTokens))                 // #nosec G115
+	setTokenUsageFromResponseUsage(tokenUsage, resp.Usage)
+}
+
+// setTokenUsageFromResponseUsage populates tokenUsage from a Responses API usage object.
+// A nil usage leaves tokenUsage untouched.
+func setTokenUsageFromResponseUsage(tokenUsage *metrics.TokenUsage, usage *openai.ResponseUsage) {
+	if usage == nil {
+		return
+	}
+	tokenUsage.SetInputTokens(uint32(usage.InputTokens))                                             // #nosec G115
+	tokenUsage.SetOutputTokens(uint32(usage.OutputTokens))                                           // #nosec G115
+	tokenUsage.SetTotalTokens(uint32(usage.TotalTokens))                                             // #nosec G115
+	tokenUsage.SetCachedInputTokens(uint32(usage.InputTokensDetails.CachedTokens))                   // #nosec G115
+	tokenUsage.SetCacheCreationInputTokens(uint32(usage.InputTokensDetails.CacheWriteTokensValue())) // #nosec G115
+	tokenUsage.SetReasoningTokens(uint32(usage.OutputTokensDetails.ReasoningTokens))                 // #nosec G115
 }
 
 // extractUsageFromBufferEvent extracts the token usage and model from the buffered SSE events.

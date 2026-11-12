@@ -192,26 +192,7 @@ func buildResponsesResponseAttributes(resp *openai.Response, config *openinferen
 		}
 	}
 	// Add token usage if available
-	if resp.Usage != nil {
-		if resp.Usage.InputTokens > 0 {
-			attrs = append(attrs, attribute.Int(openinference.LLMTokenCountPrompt, int(resp.Usage.InputTokens)))
-		}
-		if resp.Usage.OutputTokens > 0 {
-			attrs = append(attrs, attribute.Int(openinference.LLMTokenCountCompletion, int(resp.Usage.OutputTokens)))
-		}
-		if resp.Usage.TotalTokens > 0 {
-			attrs = append(attrs, attribute.Int(openinference.LLMTokenCountTotal, int(resp.Usage.TotalTokens)))
-		}
-		if resp.Usage.InputTokensDetails.CachedTokens > 0 {
-			attrs = append(attrs, attribute.Int(openinference.LLMTokenCountPromptCacheHit, int(resp.Usage.InputTokensDetails.CachedTokens)))
-		}
-		if cacheWriteTokens := resp.Usage.InputTokensDetails.CacheWriteTokensValue(); cacheWriteTokens > 0 {
-			attrs = append(attrs, attribute.Int(openinference.LLMTokenCountPromptCacheWrite, int(cacheWriteTokens)))
-		}
-		if resp.Usage.OutputTokensDetails.ReasoningTokens > 0 {
-			attrs = append(attrs, attribute.Int(openinference.LLMTokenCountCompletionReasoning, int(resp.Usage.OutputTokensDetails.ReasoningTokens)))
-		}
-	}
+	attrs = append(attrs, responseUsageAttrs(resp.Usage)...)
 	if !config.HideOutputs && !config.HideOutputMessages {
 		for i := range resp.Output {
 			attrs = setResponseOutputAttrs(&resp.Output[i], attrs, config, i)
@@ -384,6 +365,34 @@ func setResponseCustomToolCallAttrs(c *openai.ResponseCustomToolCall, attrs []at
 		if data, err := json.Marshal(map[string]string{"input": c.Input}); err == nil {
 			attrs = append(attrs, attribute.String(openinference.OutputMessageToolCallAttribute(messageIndex, 0, openinference.ToolCallFunctionArguments), string(data)))
 		}
+	}
+	return attrs
+}
+
+// responseUsageAttrs maps a Responses API usage object to OpenInference token
+// count attributes, skipping zero values. It returns nil for a nil usage.
+func responseUsageAttrs(u *openai.ResponseUsage) []attribute.KeyValue {
+	if u == nil {
+		return nil
+	}
+	var attrs []attribute.KeyValue
+	if u.InputTokens > 0 {
+		attrs = append(attrs, attribute.Int(openinference.LLMTokenCountPrompt, int(u.InputTokens)))
+	}
+	if u.OutputTokens > 0 {
+		attrs = append(attrs, attribute.Int(openinference.LLMTokenCountCompletion, int(u.OutputTokens)))
+	}
+	if u.TotalTokens > 0 {
+		attrs = append(attrs, attribute.Int(openinference.LLMTokenCountTotal, int(u.TotalTokens)))
+	}
+	if u.InputTokensDetails.CachedTokens > 0 {
+		attrs = append(attrs, attribute.Int(openinference.LLMTokenCountPromptCacheHit, int(u.InputTokensDetails.CachedTokens)))
+	}
+	if cacheWriteTokens := u.InputTokensDetails.CacheWriteTokensValue(); cacheWriteTokens > 0 {
+		attrs = append(attrs, attribute.Int(openinference.LLMTokenCountPromptCacheWrite, int(cacheWriteTokens)))
+	}
+	if u.OutputTokensDetails.ReasoningTokens > 0 {
+		attrs = append(attrs, attribute.Int(openinference.LLMTokenCountCompletionReasoning, int(u.OutputTokensDetails.ReasoningTokens)))
 	}
 	return attrs
 }

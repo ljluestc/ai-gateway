@@ -46,6 +46,7 @@ var (
 	_ tracingapi.RerankTracer               = (*rerankTracer)(nil)
 	_ tracingapi.SystemOneTracer            = (*systemOneTracer)(nil)
 	_ tracingapi.ResponsesInputTokensTracer = (*responsesInputTokensTracer)(nil)
+	_ tracingapi.ResponsesCompactTracer     = (*responsesCompactTracer)(nil)
 	_ tracingapi.CountTokensTracer          = (*countTokensTracer)(nil)
 	_ tracingapi.TokenizeTracer             = (*tokenizeTracer)(nil)
 )
@@ -63,6 +64,7 @@ type (
 	rerankTracer               = requestTracerImpl[cohereschema.RerankV2Request, cohereschema.RerankV2Response, struct{}]
 	systemOneTracer            = requestTracerImpl[typesafeschema.SystemOneRequest, typesafeschema.SystemOneResponse, struct{}]
 	responsesInputTokensTracer = requestTracerImpl[openai.ResponseRequest, openai.ResponsesInputTokensResponse, struct{}]
+	responsesCompactTracer     = requestTracerImpl[openai.ResponseRequest, openai.ResponsesCompactResponse, struct{}]
 	countTokensTracer          = requestTracerImpl[anthropicschema.CountTokensRequest, anthropicschema.CountTokensResponse, struct{}]
 	tokenizeTracer             = requestTracerImpl[tokenize.RequestUnion, tokenize.Response, struct{}]
 )
@@ -285,6 +287,18 @@ func newResponsesInputTokensTracer(tracer trace.Tracer, propagator propagation.T
 		headerAttributes,
 		func(span trace.Span, recorder tracingapi.ResponsesInputTokensRecorder) tracingapi.ResponsesInputTokensSpan {
 			return &responsesInputTokensSpan{span: span, recorder: recorder}
+		},
+	)
+}
+
+func newResponsesCompactTracer(tracer trace.Tracer, propagator propagation.TextMapPropagator, recorder tracingapi.ResponsesCompactRecorder, headerAttributes map[string]string) tracingapi.ResponsesCompactTracer {
+	return newRequestTracer(
+		tracer,
+		propagator,
+		recorder,
+		headerAttributes,
+		func(span trace.Span, recorder tracingapi.ResponsesCompactRecorder) tracingapi.ResponsesCompactSpan {
+			return &responsesCompactSpan{span: span, recorder: recorder}
 		},
 	)
 }

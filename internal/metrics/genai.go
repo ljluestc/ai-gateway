@@ -39,6 +39,7 @@ const (
 	GenAIOperationSystemOne            GenAIOperation = "systemone"
 	GenAIOperationTokenize             GenAIOperation = "tokenize"
 	GenAIOperationResponsesInputTokens GenAIOperation = "responses_input_tokens"
+	GenAIOperationResponsesCompact     GenAIOperation = "responses_compact"
 	GenAIOperationCountTokens          GenAIOperation = "count_tokens"
 
 	// Provider names according to the Semantic Conventions for Generative AI Metrics.

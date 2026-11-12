@@ -125,6 +125,8 @@ type (
 	TokenizeEndpointSpec struct{}
 	// ResponsesInputTokensEndpointSpec implements EndpointSpec for /v1/responses/input_tokens.
 	ResponsesInputTokensEndpointSpec struct{}
+	// ResponsesCompactEndpointSpec implements EndpointSpec for /v1/responses/compact.
+	ResponsesCompactEndpointSpec struct{}
 	// MessagesCountTokensEndpointSpec implements EndpointSpec for /v1/messages/count_tokens.
 	MessagesCountTokensEndpointSpec struct{}
 )
@@ -1295,6 +1297,47 @@ func (ResponsesInputTokensEndpointSpec) ParseMultipartBody([]byte, string, bool)
 
 // RedactSensitiveInfoFromRequest implements [EndpointSpec.RedactSensitiveInfoFromRequest].
 func (ResponsesInputTokensEndpointSpec) RedactSensitiveInfoFromRequest(req *openai.ResponseRequest) (*openai.ResponseRequest, error) {
+	// Same request schema as /v1/responses — reuse its redaction.
+	return ResponsesEndpointSpec{}.RedactSensitiveInfoFromRequest(req)
+}
+
+// ParseBody implements [EndpointSpec.ParseBody].
+//
+// The compact request body is a subset of the /v1/responses body (model, input,
+// instructions, previous_response_id, prompt_cache_key), so it reuses
+// openai.ResponseRequest. Compaction never streams, so any "stream" field is ignored.
+func (ResponsesCompactEndpointSpec) ParseBody(
+	body []byte,
+	_ bool,
+) (internalapi.OriginalModel, *openai.ResponseRequest, bool, []byte, error) {
+	var req openai.ResponseRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		return "", nil, false, nil, fmt.Errorf("%w: failed to parse JSON for /v1/responses/compact: %w", internalapi.ErrMalformedRequest, err)
+	}
+	return req.Model, &req, false, nil, nil
+}
+
+// GetTranslator implements [EndpointSpec.GetTranslator].
+func (ResponsesCompactEndpointSpec) GetTranslator(
+	schema filterapi.VersionedAPISchema, modelNameOverride string,
+) (translator.OpenAIResponsesCompactTranslator, error) {
+	switch schema.Name {
+	case filterapi.APISchemaOpenAI:
+		return translator.NewResponsesCompactOpenAIToOpenAITranslator(schema.OpenAIPrefix(), modelNameOverride), nil
+	case filterapi.APISchemaAzureOpenAI:
+		return translator.NewResponsesCompactOpenAIToAzureOpenAITranslator(schema.Version, modelNameOverride), nil
+	default:
+		return nil, fmt.Errorf("%w: unsupported API schema for /v1/responses/compact: backend=%s", internalapi.ErrInvalidRequestBody, schema)
+	}
+}
+
+// ParseMultipartBody implements [Spec.ParseMultipartBody].
+func (ResponsesCompactEndpointSpec) ParseMultipartBody([]byte, string, bool) (internalapi.OriginalModel, *openai.ResponseRequest, bool, []byte, error) {
+	return "", nil, false, nil, errMultipartNotSupported
+}
+
+// RedactSensitiveInfoFromRequest implements [EndpointSpec.RedactSensitiveInfoFromRequest].
+func (ResponsesCompactEndpointSpec) RedactSensitiveInfoFromRequest(req *openai.ResponseRequest) (*openai.ResponseRequest, error) {
 	// Same request schema as /v1/responses — reuse its redaction.
 	return ResponsesEndpointSpec{}.RedactSensitiveInfoFromRequest(req)
 }

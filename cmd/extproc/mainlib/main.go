@@ -341,6 +341,7 @@ func Main(ctx context.Context, args []string, stderr io.Writer) (err error) {
 	systemOneMetricsFactory := metrics.NewMetricsFactory(meter, metricsRequestHeaderAttributes, metrics.GenAIOperationSystemOne)
 	tokenizeMetricsFactory := metrics.NewMetricsFactory(meter, metricsRequestHeaderAttributes, metrics.GenAIOperationTokenize)
 	responsesInputTokensMetricsFactory := metrics.NewMetricsFactory(meter, metricsRequestHeaderAttributes, metrics.GenAIOperationResponsesInputTokens)
+	responsesCompactMetricsFactory := metrics.NewMetricsFactory(meter, metricsRequestHeaderAttributes, metrics.GenAIOperationResponsesCompact)
 	countTokensMetricsFactory := metrics.NewMetricsFactory(meter, metricsRequestHeaderAttributes, metrics.GenAIOperationCountTokens)
 	mcpMetrics := metrics.NewMCP(meter, metricsRequestHeaderAttributes)
 
@@ -362,6 +363,8 @@ func Main(ctx context.Context, args []string, stderr io.Writer) (err error) {
 		decisionsMetricsFactory, tracing.DecisionsTracer(), endpointspec.DecisionsEndpointSpec{}))
 	server.Register(path.Join(flags.rootPrefix, endpointPrefixes.OpenAI, "/v1/responses/input_tokens"), extproc.NewFactory(
 		responsesInputTokensMetricsFactory, tracing.ResponsesInputTokensTracer(), endpointspec.ResponsesInputTokensEndpointSpec{}))
+	server.Register(path.Join(flags.rootPrefix, endpointPrefixes.OpenAI, "/v1/responses/compact"), extproc.NewFactory(
+		responsesCompactMetricsFactory, tracing.ResponsesCompactTracer(), endpointspec.ResponsesCompactEndpointSpec{}))
 	server.Register(path.Join(flags.rootPrefix, endpointPrefixes.OpenAI, "/v1/audio/speech"), extproc.NewFactory(
 		speechMetricsFactory, tracing.SpeechTracer(), endpointspec.SpeechEndpointSpec{}))
 	server.Register(path.Join(flags.rootPrefix, endpointPrefixes.OpenAI, "/v1/audio/transcriptions"), extproc.NewFactory(

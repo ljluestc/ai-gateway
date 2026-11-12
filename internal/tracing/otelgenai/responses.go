@@ -35,6 +35,20 @@ func responsesResponseAttrs(resp *openai.Response) []attribute.KeyValue {
 	return attrs
 }
 
+// responsesCompactResponseAttrs extracts the identity and usage of a
+// /v1/responses/compact result. The compact response carries no model field.
+func responsesCompactResponseAttrs(resp *openai.ResponsesCompactResponse) []attribute.KeyValue {
+	attrs := responseIdentityAttrs(resp.ID, "")
+	if u := resp.Usage; u != nil {
+		attrs = append(attrs, usageAttrs(int(u.InputTokens), int(u.OutputTokens))...)
+		attrs = append(attrs, usageDetailAttrs(
+			int(u.InputTokensDetails.CachedTokens),
+			int(u.InputTokensDetails.CacheWriteTokensValue()),
+			int(u.OutputTokensDetails.ReasoningTokens))...)
+	}
+	return attrs
+}
+
 // responsesConversationID reads the conversation this request continues.
 //
 // The union carries either a bare id string or an object holding one.

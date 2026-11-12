@@ -52,6 +52,8 @@ type (
 		TokenizeTracer() TokenizeTracer
 		// ResponsesInputTokensTracer creates spans for OpenAI /v1/responses/input_tokens requests.
 		ResponsesInputTokensTracer() ResponsesInputTokensTracer
+		// ResponsesCompactTracer creates spans for OpenAI /v1/responses/compact requests.
+		ResponsesCompactTracer() ResponsesCompactTracer
 		// CountTokensTracer creates spans for Anthropic count tokens requests.
 		CountTokensTracer() CountTokensTracer
 		// MCPTracer creates spans for MCP requests.
@@ -106,6 +108,8 @@ type (
 	TokenizeTracer = RequestTracer[tokenize.RequestUnion, tokenize.Response, struct{}]
 	// ResponsesInputTokensTracer creates spans for OpenAI /v1/responses/input_tokens requests.
 	ResponsesInputTokensTracer = RequestTracer[openai.ResponseRequest, openai.ResponsesInputTokensResponse, struct{}]
+	// ResponsesCompactTracer creates spans for OpenAI /v1/responses/compact requests.
+	ResponsesCompactTracer = RequestTracer[openai.ResponseRequest, openai.ResponsesCompactResponse, struct{}]
 	// CountTokensTracer creates spans for Anthropic count tokens requests.
 	CountTokensTracer = RequestTracer[anthropicschema.CountTokensRequest, anthropicschema.CountTokensResponse, struct{}]
 )
@@ -151,6 +155,8 @@ type (
 	TokenizeSpan = Span[tokenize.Response, struct{}]
 	// ResponsesInputTokensSpan represents an OpenAI /v1/responses/input_tokens request span.
 	ResponsesInputTokensSpan = Span[openai.ResponsesInputTokensResponse, struct{}]
+	// ResponsesCompactSpan represents an OpenAI /v1/responses/compact request span.
+	ResponsesCompactSpan = Span[openai.ResponsesCompactResponse, struct{}]
 	// CountTokensSpan represents an Anthropic count tokens request span.
 	CountTokensSpan = Span[anthropicschema.CountTokensResponse, struct{}]
 )
@@ -210,6 +216,8 @@ type (
 	TokenizeRecorder = SpanRecorder[tokenize.RequestUnion, tokenize.Response, struct{}]
 	// ResponsesInputTokensRecorder records attributes to a span according to a semantic convention.
 	ResponsesInputTokensRecorder = SpanRecorder[openai.ResponseRequest, openai.ResponsesInputTokensResponse, struct{}]
+	// ResponsesCompactRecorder records attributes to a span according to a semantic convention.
+	ResponsesCompactRecorder = SpanRecorder[openai.ResponseRequest, openai.ResponsesCompactResponse, struct{}]
 	// CountTokensRecorder records attributes to a span according to a semantic convention.
 	CountTokensRecorder = SpanRecorder[anthropicschema.CountTokensRequest, anthropicschema.CountTokensResponse, struct{}]
 )
@@ -324,6 +332,11 @@ func (NoopTracing) ResponsesInputTokensTracer() ResponsesInputTokensTracer {
 	return NoopResponsesInputTokensTracer{}
 }
 
+// ResponsesCompactTracer implements Tracing.ResponsesCompactTracer.
+func (NoopTracing) ResponsesCompactTracer() ResponsesCompactTracer {
+	return NoopResponsesCompactTracer{}
+}
+
 // CountTokensTracer implements Tracing.CountTokensTracer.
 func (NoopTracing) CountTokensTracer() CountTokensTracer {
 	return NoopCountTokensTracer{}
@@ -365,6 +378,8 @@ type (
 	NoopTokenizeTracer = NoopTracer[tokenize.RequestUnion, tokenize.Response, struct{}]
 	// NoopResponsesInputTokensTracer implements ResponsesInputTokensTracer.
 	NoopResponsesInputTokensTracer = NoopTracer[openai.ResponseRequest, openai.ResponsesInputTokensResponse, struct{}]
+	// NoopResponsesCompactTracer implements ResponsesCompactTracer.
+	NoopResponsesCompactTracer = NoopTracer[openai.ResponseRequest, openai.ResponsesCompactResponse, struct{}]
 	// NoopCountTokensTracer implements CountTokensTracer.
 	NoopCountTokensTracer = NoopTracer[anthropicschema.CountTokensRequest, anthropicschema.CountTokensResponse, struct{}]
 )

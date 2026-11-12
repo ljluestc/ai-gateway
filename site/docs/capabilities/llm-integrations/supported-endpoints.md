@@ -351,6 +351,84 @@ curl -H "Content-Type: application/json" \
   $GATEWAY_URL/v1/responses
 ```
 
+#### Open Responses compatibility
+
+`/v1/responses` and `/v1/responses/compact` accept requests that follow the [Open Responses specification](https://www.openresponses.org/specification), the provider-neutral subset of the OpenAI Responses API. Request and response bodies are forwarded unchanged, so any backend that implements Open Responses can serve these endpoints when it is configured with the `OpenAI` API schema. Examples include vLLM, Ollama, LM Studio, and Hugging Face. This covers the following:
+
+- Message, function call, function call output, reasoning, and compaction items
+- Semantic streaming events (`response.created`, `response.output_text.delta`, `response.completed`, and so on), with usage taken from the terminal event
+- The assistant message `phase` field (`commentary` or `final_answer`), which is kept on both input history and response output
+- `POST /v1/responses/compact` (see [Responses Compact](#responses-compact))
+
+The WebSocket transport defined by the 2026-04-24 revision of the specification is not supported. Use HTTP with Server-Sent Events streaming instead.
+
+To check a deployment, run the [Open Responses compliance tests](https://www.openresponses.org/compliance) against the gateway:
+
+```bash
+git clone https://github.com/openresponses/openresponses && cd openresponses
+bun install
+bun run bin/compliance-test.ts --base-url "$GATEWAY_URL/v1" --api-key "$API_KEY" --model gpt-4o-mini
+```
+
+### Responses Compact
+
+**Endpoint:** `POST /v1/responses/compact`
+
+**Status:** ✅ Supported
+
+**Description:** Compacts a Responses conversation into a shorter list of output items. The result typically includes an encrypted `compaction` item, which you can pass back as input on later `/v1/responses` calls. This keeps long-running agent loops within the model's context window. The endpoint is defined by both the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses/compact) and the [Open Responses specification](https://www.openresponses.org/reference).
+
+Compaction runs inference upstream. The gateway reads the `usage` object from the response, so compaction calls count toward token metrics, cost calculation, and usage-based rate limits like any other inference call.
+
+**Features:**
+
+- ✅ Request body: `model`, `input`, `instructions`, `previous_response_id`, `prompt_cache_key`
+- ✅ Model selection via request body or `x-ai-eg-model` header
+- ✅ Token usage tracking and cost calculation
+- ✅ Provider fallback and load balancing
+- ✅ Tracing (OpenInference and OpenTelemetry GenAI semantic conventions)
+- ❌ Streaming (compaction always returns a single JSON response)
+
+**Supported Providers:**
+
+- OpenAI
+- Azure OpenAI (with automatic `api-version` injection)
+- Any provider that implements Open Responses, configured with the `OpenAI` API schema
+
+**Example:**
+
+```bash
+curl -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5",
+    "input": [
+      {"type": "message", "role": "user", "content": "My name is Alice."},
+      {"type": "message", "role": "assistant", "phase": "final_answer", "content": "Hello Alice!"}
+    ]
+  }' \
+  $GATEWAY_URL/v1/responses/compact
+```
+
+**Response Format:**
+
+```json
+{
+  "id": "resp_001",
+  "object": "response.compaction",
+  "created_at": 1764967971,
+  "output": [
+    { "id": "cmp_001", "type": "compaction", "encrypted_content": "gAAAAA..." }
+  ],
+  "usage": {
+    "input_tokens": 139,
+    "input_tokens_details": { "cached_tokens": 0 },
+    "output_tokens": 438,
+    "output_tokens_details": { "reasoning_tokens": 64 },
+    "total_tokens": 577
+  }
+}
+```
+
 ### Decisions
 
 **Endpoint:** `POST /v1/decisions`

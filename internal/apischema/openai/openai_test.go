@@ -14270,3 +14270,93 @@ func TestResponseContentPartDoneEventPartUnionUnmarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+// TestOpenResponsesAssistantPhase pins the assistant message "phase" field
+// added by the Open Responses 2026-04-24 specification: it must survive a
+// parse/marshal round trip on both input history and response output.
+func TestOpenResponsesAssistantPhase(t *testing.T) {
+	t.Run("input history", func(t *testing.T) {
+		const body = `{"model":"m","input":[` +
+			`{"type":"message","role":"assistant","phase":"commentary","content":"thinking"},` +
+			`{"role":"assistant","phase":"final_answer","content":[{"type":"output_text","text":"four","annotations":[]}]},` +
+			`{"type":"message","role":"user","content":"repeat"}]}`
+		var req ResponseRequest
+		require.NoError(t, json.Unmarshal([]byte(body), &req))
+		items := req.Input.OfInputItemList
+		require.Len(t, items, 3)
+		require.Equal(t, "commentary", items[0].OfOutputMessage.Phase)
+		require.Equal(t, "final_answer", items[1].OfOutputMessage.Phase)
+
+		out, err := json.Marshal(req)
+		require.NoError(t, err)
+		require.Contains(t, string(out), `"phase":"commentary"`)
+		require.Contains(t, string(out), `"phase":"final_answer"`)
+	})
+
+	t.Run("easy input message", func(t *testing.T) {
+		var msg EasyInputMessageParam
+		require.NoError(t, json.Unmarshal([]byte(`{"type":"message","role":"assistant","phase":"final_answer","content":"x"}`), &msg))
+		require.Equal(t, "final_answer", msg.Phase)
+		out, err := json.Marshal(msg)
+		require.NoError(t, err)
+		require.Contains(t, string(out), `"phase":"final_answer"`)
+	})
+
+	t.Run("omitted when unset", func(t *testing.T) {
+		out, err := json.Marshal(ResponseOutputMessage{
+			ID: "msg_1", Role: "assistant", Type: "message", Status: "completed",
+			Content: ResponseOutputMessageContentUnion{OfContentArray: []ResponseOutputMessageContentArrayUnion{}},
+		})
+		require.NoError(t, err)
+		require.NotContains(t, string(out), "phase")
+	})
+
+	t.Run("response output", func(t *testing.T) {
+		const body = `{"id":"resp_1","object":"response","created_at":1,"status":"completed","model":"m","output":[` +
+			`{"id":"msg_c","type":"message","status":"completed","role":"assistant","phase":"commentary","content":[{"type":"output_text","text":"a","annotations":[]}]},` +
+			`{"id":"msg_f","type":"message","status":"completed","role":"assistant","phase":"final_answer","content":[{"type":"output_text","text":"b","annotations":[]}]}]}`
+		var resp Response
+		require.NoError(t, json.Unmarshal([]byte(body), &resp))
+		require.Len(t, resp.Output, 2)
+		require.Equal(t, "commentary", resp.Output[0].OfOutputMessage.Phase)
+		require.Equal(t, "final_answer", resp.Output[1].OfOutputMessage.Phase)
+	})
+}
+
+// TestResponsesCompactResponse_JSON pins the /v1/responses/compact response shape
+// (CompactResource in the Open Responses specification).
+func TestResponsesCompactResponse_JSON(t *testing.T) {
+	const body = `{
+  "id": "resp_compact_1",
+  "object": "response.compaction",
+  "created_at": 1764967971,
+  "output": [
+    {"id": "msg_1", "type": "message", "status": "completed", "role": "assistant",
+     "content": [{"type": "output_text", "text": "hi", "annotations": []}]},
+    {"id": "cmp_1", "type": "compaction", "encrypted_content": "enc"}
+  ],
+  "usage": {
+    "input_tokens": 10, "input_tokens_details": {"cached_tokens": 2},
+    "output_tokens": 5, "output_tokens_details": {"reasoning_tokens": 1},
+    "total_tokens": 15
+  }
+}`
+	var resp ResponsesCompactResponse
+	require.NoError(t, json.Unmarshal([]byte(body), &resp))
+	require.Equal(t, "resp_compact_1", resp.ID)
+	require.Equal(t, "response.compaction", resp.Object)
+	require.Equal(t, int64(1764967971), resp.CreatedAt)
+	require.Len(t, resp.Output, 2)
+	require.NotNil(t, resp.Output[0].OfOutputMessage)
+	require.Equal(t, "enc", resp.Output[1].OfCompaction.EncryptedContent)
+	require.NotNil(t, resp.Usage)
+	require.Equal(t, int64(15), resp.Usage.TotalTokens)
+
+	out, err := json.Marshal(resp)
+	require.NoError(t, err)
+	var roundTrip ResponsesCompactResponse
+	require.NoError(t, json.Unmarshal(out, &roundTrip))
+	require.Equal(t, resp.ID, roundTrip.ID)
+	require.Len(t, roundTrip.Output, 2)
+	require.Equal(t, resp.Usage.TotalTokens, roundTrip.Usage.TotalTokens)
+}

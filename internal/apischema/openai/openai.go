@@ -4372,6 +4372,12 @@ type EasyInputMessageParam struct {
 	Role string `json:"role,omitzero"`
 	// The type of the message input. Always `message`.
 	Type string `json:"type,omitzero"`
+	// Phase labels an assistant message as intermediate commentary or the final
+	// answer. Clients should resend it unchanged on assistant history.
+	// Defined by the Open Responses specification (2026-04-24).
+	//
+	// Any of "commentary", "final_answer".
+	Phase string `json:"phase,omitzero"`
 }
 
 // EasyInputMessageContentUnionParam is a union type for different message content parameters.
@@ -4500,6 +4506,11 @@ type ResponseOutputMessage struct {
 	Role string `json:"role"`
 	// The type of the output message. Always `message`.
 	Type string `json:"type"`
+	// Phase labels the message as intermediate commentary or the final answer.
+	// Defined by the Open Responses specification (2026-04-24).
+	//
+	// Any of "commentary", "final_answer".
+	Phase string `json:"phase,omitzero"`
 }
 
 // ResponseOutputMessageContentUnion is a union type for different output message content parameters.
@@ -9192,6 +9203,23 @@ type ResponsesInputTokensResponse struct {
 	// Object is the object type, which is always "response.input_tokens".
 	Object      string `json:"object"`
 	InputTokens int64  `json:"input_tokens"`
+}
+
+// ResponsesCompactResponse represents the response from /v1/responses/compact.
+//
+// See https://www.openresponses.org/reference (CompactResource) and
+// https://platform.openai.com/docs/api-reference/responses/compact.
+type ResponsesCompactResponse struct {
+	// ID is the unique identifier for the compacted response.
+	ID string `json:"id"`
+	// Object is the object type, which is always "response.compaction".
+	Object string `json:"object"`
+	// Output is the compacted list of output items.
+	Output []ResponseOutputItemUnion `json:"output"`
+	// CreatedAt is the Unix timestamp (in seconds) when the compacted conversation was created.
+	CreatedAt int64 `json:"created_at"`
+	// Usage is the token accounting for the compaction pass.
+	Usage *ResponseUsage `json:"usage,omitempty"`
 }
 
 // File API

@@ -152,6 +152,17 @@ func TestEndpointCoverage(t *testing.T) {
 			expected: coverage{responseAttrs: true},
 		},
 		{
+			// Compaction runs inference over a Responses-shaped request, so it
+			// records the same request attributes and instructions as responses.
+			// The compacted output is opaque (it carries encrypted compaction
+			// items), so no output messages are captured.
+			name:   "responses compact",
+			actual: coverageOf(t, NewResponsesCompactRecorder(cfg)),
+			expected: coverage{
+				requestAttrs: true, responseAttrs: true, systemInstructions: true,
+			},
+		},
+		{
 			// The request carries a full conversation, so it records the same
 			// input content the messages endpoint does. No inference runs, so
 			// sampling parameters and output messages have no meaning, and the

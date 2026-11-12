@@ -287,6 +287,8 @@ func TestRecorders_operations(t *testing.T) {
 		// never reached a model.
 		{name: "responses input tokens", spanName: mustStartName(t, NewResponsesInputTokensRecorder(cfg), &openai.ResponseRequest{Model: "m"}), expectedOperation: "tokenize m"},
 		{name: "count tokens", spanName: mustStartName(t, NewCountTokensRecorder(cfg), &anthropic.CountTokensRequest{Model: "m"}), expectedOperation: "tokenize m"},
+		// Compaction runs inference, so it reports chat like /v1/responses.
+		{name: "responses compact", spanName: mustStartName(t, NewResponsesCompactRecorder(cfg), &openai.ResponseRequest{Model: "m"}), expectedOperation: "chat m"},
 	}
 
 	for _, tc := range tests {
@@ -574,6 +576,37 @@ func TestResponsesInputTokensRecorder_records(t *testing.T) {
 	})
 	testotel.RequireAttributesEqual(t, []attribute.KeyValue{
 		attribute.Int(UsageInputTokens, 42),
+	}, respSpan.Attributes)
+	require.Equal(t, codes.Ok, respSpan.Status.Code)
+}
+
+// TestResponsesCompactRecorder_records pins that compaction reports the usage of
+// the inference it ran, and the compacted response id. The compact response
+// carries no model, so no response model attribute is emitted.
+func TestResponsesCompactRecorder_records(t *testing.T) {
+	r := NewResponsesCompactRecorder(&Config{})
+
+	respSpan := testotel.RecordWithSpan(t, func(span oteltrace.Span) bool {
+		r.RecordResponse(span, &openai.ResponsesCompactResponse{
+			ID:     "resp_compact_1",
+			Object: "response.compaction",
+			Usage: &openai.ResponseUsage{
+				InputTokens:         100,
+				InputTokensDetails:  openai.ResponseUsageInputTokensDetails{CachedTokens: 10, CacheWriteTokens: 4},
+				OutputTokens:        20,
+				OutputTokensDetails: openai.ResponseUsageOutputTokensDetails{ReasoningTokens: 3},
+				TotalTokens:         120,
+			},
+		})
+		return false
+	})
+	testotel.RequireAttributesEqual(t, []attribute.KeyValue{
+		attribute.String(ResponseID, "resp_compact_1"),
+		attribute.Int(UsageInputTokens, 100),
+		attribute.Int(UsageOutputTokens, 20),
+		attribute.Int(UsageCacheReadInputTokens, 10),
+		attribute.Int(UsageCacheCreationInputTokens, 4),
+		attribute.Int(UsageReasoningOutputTokens, 3),
 	}, respSpan.Attributes)
 	require.Equal(t, codes.Ok, respSpan.Status.Code)
 }
